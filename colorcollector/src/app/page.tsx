@@ -3,10 +3,8 @@ import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
 interface Performance {
-
   runTime: number;
   memUsage: number;
-
 }
 
 interface ColorObject {
@@ -17,19 +15,22 @@ interface ColorObject {
   isColorFlagCollect: boolean;
 }
 
-const mockData = [{
-  colorType: "#DB1D1D",
-  colorPos: [8,35],
-  flagColorPos: [17,35],
-  isColorPosCollect: false,
-  isColorFlagCollect: false
-},{
-  colorType: "#10DA60",
-  colorPos: [1,10],
-  flagColorPos: [25,55],
-  isColorPosCollect: false,
-  isColorFlagCollect: false
-}]
+const mockData = [
+  {
+    colorType: "#DB1D1D",
+    colorPos: [8, 35],
+    flagColorPos: [17, 35],
+    isColorPosCollect: false,
+    isColorFlagCollect: false,
+  },
+  {
+    colorType: "#10DA60",
+    colorPos: [1, 10],
+    flagColorPos: [25, 55],
+    isColorPosCollect: false,
+    isColorFlagCollect: false,
+  },
+];
 
 export default function Home() {
   const numRows = 30;
@@ -43,27 +44,34 @@ export default function Home() {
   //const [startPos, setStartPos] = useState<[number, number]>([17, 35]);
   //const [endPos, setEndPos] = useState<[number, number]>([1, 10]);
 
-  const [colorPos, setColorPos] = useState<ColorObject[]>(mockData);
+  const [tempColorPos, setTempColorPos] = useState<ColorObject[]>(mockData);
+  const [colorPos, setColorPos] = useState<ColorObject[]>([]);
 
-  const [playState,setPlayState] = useState<string>("STOPPED");
-  const [blindSearchPerformance, setBlindSearchPerformance] = useState<Performance>({runTime: 0, memUsage: 0});
-  const [heuristicPerformance, setHeuristicSearchPerformance] = useState<Performance>({runTime: 0, memUsage: 0});
-  const [animationFrameId, setAnimationFrameId] = useState<number|null>(null);
+  const [playState, setPlayState] = useState<string>("STOPPED");
+  const [blindSearchPerformance, setBlindSearchPerformance] =
+    useState<Performance>({ runTime: 0, memUsage: 0 });
+  const [heuristicPerformance, setHeuristicSearchPerformance] =
+    useState<Performance>({ runTime: 0, memUsage: 0 });
+  const [animationFrameId, setAnimationFrameId] = useState<number | null>(null);
 
   const [grid, setGrid] = useState(
     Array.from({ length: numRows }, () => Array(numCols).fill(0))
   );
 
   const handleMouseDown = (row: number, col: number) => {
-    if(playState !== "STOPPED") return;
+    if (playState !== "STOPPED") return;
     const newGrid = [...grid];
     clearBoard();
 
-    const isColorPosMatch = colorPos?.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
-    const isFlagColorPosMatch = colorPos?.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
-  
+    const isColorPosMatch = colorPos?.some(
+      ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+    );
+    const isFlagColorPosMatch = colorPos?.some(
+      ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+    );
+
     if (isColorPosMatch || isFlagColorPosMatch) return;
-  
+
     if (selectState === "WALL") {
       if (row === endPos[0] && col === endPos[1]) return;
       if (row === startPos[0] && col === startPos[1]) return;
@@ -85,11 +93,15 @@ export default function Home() {
   };
 
   const handleMouseEnter = (row: number, col: number) => {
-    if(playState !== "STOPPED") return;
+    if (playState !== "STOPPED") return;
 
-    const isColorPosMatch = colorPos?.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
-    const isFlagColorPosMatch = colorPos?.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
-  
+    const isColorPosMatch = colorPos?.some(
+      ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+    );
+    const isFlagColorPosMatch = colorPos?.some(
+      ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+    );
+
     if (isColorPosMatch || isFlagColorPosMatch) return;
     if (!isMouseDown || selectState !== "WALL") return;
     if (row === endPos[0] && col === endPos[1]) return;
@@ -106,23 +118,25 @@ export default function Home() {
   const clearBoard = () => {
     const newGrid = [...grid];
 
-    newGrid.map((row,rowindex) => {
-      newGrid[rowindex].map((col,colindex) => {
-
-        if(newGrid[rowindex][colindex] !== 1) {
+    newGrid.map((row, rowindex) => {
+      newGrid[rowindex].map((col, colindex) => {
+        if (newGrid[rowindex][colindex] !== 1) {
           newGrid[rowindex][colindex] = 0;
         }
-      })
-    })
+      });
+    });
 
     setGrid(newGrid);
+  };
 
-  }
+  useEffect(() => {
+    setColorPos(tempColorPos.map(item => ({ ...item })));
+  }, []);
 
   useEffect(() => {
     console.log(colorPos);
     console.log("----------");
-  },[colorPos]);
+  }, [colorPos]);
 
   const handleFindPath = () => {
     setPlayState("START");
@@ -132,20 +146,26 @@ export default function Home() {
 
     const windowPerformance = window.performance as any;
     let totalMemory = windowPerformance.memory.usedJSHeapSize;
-    const startTime = performance.now(); 
-  
+    const startTime = performance.now();
+
     console.log("Start path");
-    clearBoard(); 
-  
+    clearBoard();
+
     const newGrid = [...grid];
     const directions = [
-      [0, 1], [1, 0], [0, -1], [-1, 0], // 4 ทิศทาง: ขวา, ล่าง, ซ้าย, ขึ้น
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0], // 4 ทิศทาง: ขวา, ล่าง, ซ้าย, ขึ้น
     ];
 
     let queue: Array<[number, number]> = [startPos];
-    let visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
-    let parent: Array<Array<[number, number] | null>> = Array.from({ length: numRows }, () =>
-      Array(numCols).fill(null)
+    let visited = Array.from({ length: numRows }, () =>
+      Array(numCols).fill(false)
+    );
+    let parent: Array<Array<[number, number] | null>> = Array.from(
+      { length: numRows },
+      () => Array(numCols).fill(null)
     );
     visited[startPos[0]][startPos[1]] = true;
     newGrid[startPos[0]][startPos[1]] = 10;
@@ -153,55 +173,56 @@ export default function Home() {
     let queueIndex = 0;
     let foundEnd = false;
 
-    const resetBoardForColorFinding = (startRow: number,startCol: number) => {
-
-      newGrid.map((row,rowindex) => {
-        newGrid[rowindex].map((col,colindex) => {
-  
-          if(newGrid[rowindex][colindex] !== 1) {
+    const resetBoardForColorFinding = (startRow: number, startCol: number) => {
+      newGrid.map((row, rowindex) => {
+        newGrid[rowindex].map((col, colindex) => {
+          if (newGrid[rowindex][colindex] !== 1) {
             newGrid[rowindex][colindex] = 0;
           }
-        })
-      }) 
-      queue = [[startRow,startCol]];
+        });
+      });
+      queue = [[startRow, startCol]];
       queueIndex = 0;
-      visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+      visited = Array.from({ length: numRows }, () =>
+        Array(numCols).fill(false)
+      );
       parent = Array.from({ length: numRows }, () => Array(numCols).fill(null));
       visited[startRow][startCol] = true;
       newGrid[startRow][startCol] = 10;
       setGrid([...newGrid]);
-    }
+    };
 
-    if(colorPos) {
-      setColorPos(mockData);
+    if (colorPos) {
+      setColorPos(tempColorPos.map(item => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
-    
+
       const processStep = () => {
         const windowPerformance = window.performance as any;
-        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+        totalMemory =
+          (totalMemory + windowPerformance.memory.usedJSHeapSize) / 2;
 
-        if(queueIndex >= queue.length || foundEnd) {
+        if (queueIndex >= queue.length || foundEnd) {
           const endTime = performance.now();
-          console.log("queueIndex",queueIndex)
-          console.log("queue.length",queue.length)
+          console.log("queueIndex", queueIndex);
+          console.log("queue.length", queue.length);
           console.log(`Runtime: ${endTime - startTime} ms`);
           setBlindSearchPerformance({
             runTime: endTime - startTime,
-            memUsage: totalMemory
-          })  
-          setPlayState("STOPPED");
+            memUsage: totalMemory,
+          });
+          setPlayState("END");
           return;
         }
-    
+
         const [row, col] = queue[queueIndex];
         queueIndex++;
-    
+
         for (let [dx, dy] of directions) {
           const newRow = row + dx;
           const newCol = col + dy;
-    
+
           if (
             newRow >= 0 &&
             newRow < numRows &&
@@ -214,39 +235,52 @@ export default function Home() {
             queue.push([newRow, newCol]);
             parent[newRow][newCol] = [row, col];
             newGrid[newRow][newCol] = 10;
-    
-            if(colorFinderSize > 0) {
-              if(currentColorFinderState === 0 && colorPos[currentColorFinderIndex].colorPos[0] === newRow && colorPos[currentColorFinderIndex].colorPos[1] === newCol) {
-                console.log("Found Color Index",currentColorFinderIndex);
+
+            if (colorFinderSize > 0) {
+              if (
+                currentColorFinderState === 0 &&
+                colorPos[currentColorFinderIndex].colorPos[0] === newRow &&
+                colorPos[currentColorFinderIndex].colorPos[1] === newCol
+              ) {
+                console.log("Found Color Index", currentColorFinderIndex);
                 currentColorFinderState = 1;
-                resetBoardForColorFinding(colorPos[currentColorFinderIndex].colorPos[0], colorPos[currentColorFinderIndex].colorPos[1]);
+                resetBoardForColorFinding(
+                  colorPos[currentColorFinderIndex].colorPos[0],
+                  colorPos[currentColorFinderIndex].colorPos[1]
+                );
 
                 setColorPos((prev) => {
                   const current = [...prev];
                   current[currentColorFinderIndex].isColorPosCollect = true;
                   return current;
                 });
-
               } else if (
                 currentColorFinderState === 1 &&
                 colorPos[currentColorFinderIndex].flagColorPos[0] === newRow &&
                 colorPos[currentColorFinderIndex].flagColorPos[1] === newCol
               ) {
-                const foundIndex = currentColorFinderIndex; 
+                const foundIndex = currentColorFinderIndex;
                 console.log("Found Color Flag Index", foundIndex);
-                
+
                 currentColorFinderState = 0;
-                resetBoardForColorFinding(colorPos[foundIndex].flagColorPos[0], colorPos[foundIndex].flagColorPos[1]);
+                resetBoardForColorFinding(
+                  colorPos[foundIndex].flagColorPos[0],
+                  colorPos[foundIndex].flagColorPos[1]
+                );
                 colorFinderSize--;
-              
+
                 setColorPos((prev) => {
                   const current = [...prev];
                   current[foundIndex].isColorFlagCollect = true;
-                  console.log("Index", foundIndex, current[foundIndex].isColorFlagCollect);
+                  console.log(
+                    "Index",
+                    foundIndex,
+                    current[foundIndex].isColorFlagCollect
+                  );
                   return current;
                 });
-              
-                currentColorFinderIndex += 1; 
+
+                currentColorFinderIndex += 1;
               }
             } else {
               if (newRow === endPos[0] && newCol === endPos[1]) {
@@ -254,52 +288,52 @@ export default function Home() {
                 foundEnd = true;
                 const endTime = performance.now();
                 console.log(`Runtime: ${endTime - startTime} ms`);
-    
+
                 setBlindSearchPerformance({
                   runTime: endTime - startTime,
-                  memUsage: totalMemory
-                })  
-                setPlayState("STOPPED");
+                  memUsage: totalMemory,
+                });
+                setPlayState("END");
                 foundEnd = true;
                 setGrid([...newGrid]);
                 return;
               }
             }
-          }   
+          }
         }
-    
+
         if (!foundEnd) {
           const ID = requestAnimationFrame(processStep);
-          setAnimationFrameId(ID); 
+          setAnimationFrameId(ID);
         }
       };
-    
+
       const ID = requestAnimationFrame(processStep);
       setAnimationFrameId(ID);
     } else {
       const processStep = () => {
-  
         const windowPerformance = window.performance as any;
-        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
-  
+        totalMemory =
+          (totalMemory + windowPerformance.memory.usedJSHeapSize) / 2;
+
         if (queueIndex >= queue.length || foundEnd) {
           const endTime = performance.now();
           console.log(`Runtime: ${endTime - startTime} ms`);
           setBlindSearchPerformance({
             runTime: endTime - startTime,
-            memUsage: totalMemory
-          })  
-          setPlayState("STOPPED");
+            memUsage: totalMemory,
+          });
+          setPlayState("END");
           return;
         }
-    
+
         const [row, col] = queue[queueIndex];
         queueIndex++;
-  
+
         for (let [dx, dy] of directions) {
           const newRow = row + dx;
           const newCol = col + dy;
-    
+
           if (
             newRow >= 0 &&
             newRow < numRows &&
@@ -316,62 +350,83 @@ export default function Home() {
               console.log("Found! NA");
               const endTime = performance.now();
               console.log(`Runtime: ${endTime - startTime} ms`);
-  
+
               setBlindSearchPerformance({
                 runTime: endTime - startTime,
-                memUsage: totalMemory
-              })  
-              setPlayState("STOPPED");
+                memUsage: totalMemory,
+              });
+              setPlayState("END");
               foundEnd = true;
               setGrid([...newGrid]);
               return;
             }
           }
         }
-    
+
         setGrid([...newGrid]);
-        const ID = requestAnimationFrame(processStep); 
+        const ID = requestAnimationFrame(processStep);
         setAnimationFrameId(ID);
       };
-    
+
       const ID = requestAnimationFrame(processStep);
-      setAnimationFrameId(ID); 
+      setAnimationFrameId(ID);
     }
   };
-  
-  
+
   const handleFindPathWithHeuristic = () => {
     setPlayState("START");
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
-  
+
     const windowPerformance = window.performance as any;
     let totalMemory = windowPerformance.memory.usedJSHeapSize;
     const startTime = performance.now(); // เริ่มจับเวลา
-  
+
     clearBoard();
     const newGrid = [...grid];
     const directions = [
-      [0, 1], [1, 0], [0, -1], [-1, 0], // 4 ทิศทาง: ขวา, ล่าง, ซ้าย, ขึ้น
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0], // 4 ทิศทาง: ขวา, ล่าง, ซ้าย, ขึ้น
     ];
-  
-    const calculateHeuristic = (row: number, col: number,endRow: number, endCol: number) => {
+
+    const calculateHeuristic = (
+      row: number,
+      col: number,
+      endRow: number,
+      endCol: number
+    ) => {
       return Math.abs(row - endRow) + Math.abs(col - endCol);
     };
-  
-    let queue: Array<{ row: number, col: number, g: number, h: number, f: number, parent: [number, number] | null }> = [];
-    let visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
-    let parent: Array<Array<[number, number] | null>> = Array.from({ length: numRows }, () =>
-      Array(numCols).fill(null)
+
+    let queue: Array<{
+      row: number;
+      col: number;
+      g: number;
+      h: number;
+      f: number;
+      parent: [number, number] | null;
+    }> = [];
+    let visited = Array.from({ length: numRows }, () =>
+      Array(numCols).fill(false)
     );
-  
+    let parent: Array<Array<[number, number] | null>> = Array.from(
+      { length: numRows },
+      () => Array(numCols).fill(null)
+    );
+
     visited[startPos[0]][startPos[1]] = true;
     newGrid[startPos[0]][startPos[1]] = 10;
     let foundEnd = false;
-  
-    const resetBoardForColorFinding = (startRow: number,startCol: number,endRow: number,endCol: number) => {
 
+    const resetBoardForColorFinding = (
+      startRow: number,
+      startCol: number,
+      endRow: number,
+      endCol: number
+    ) => {
       newGrid.forEach((row, rowIndex) => {
         row.forEach((col, colIndex) => {
           if (newGrid[rowIndex][colIndex] !== 1) {
@@ -380,83 +435,130 @@ export default function Home() {
         });
       });
       queue = [];
-      queue.push({ row: startRow, col: startCol, g: 0, h: calculateHeuristic(startRow, startCol,endRow,endCol), f: 0, parent: null });
-      visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+      queue.push({
+        row: startRow,
+        col: startCol,
+        g: 0,
+        h: calculateHeuristic(startRow, startCol, endRow, endCol),
+        f: 0,
+        parent: null,
+      });
+      visited = Array.from({ length: numRows }, () =>
+        Array(numCols).fill(false)
+      );
       parent = Array.from({ length: numRows }, () => Array(numCols).fill(null));
 
       visited[startRow][startCol] = true;
       newGrid[startRow][startCol] = 10;
       setGrid([...newGrid]);
-    }
+    };
 
-    if(colorPos) {
-      setColorPos(mockData);
+    if (colorPos) {
+      setColorPos(tempColorPos.map(item => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
-      let tempEndPos = [colorPos[currentColorFinderIndex].colorPos[0],colorPos[currentColorFinderIndex].colorPos[1]];
+      let tempEndPos = [
+        colorPos[currentColorFinderIndex].colorPos[0],
+        colorPos[currentColorFinderIndex].colorPos[1],
+      ];
 
-      queue.push({ row: startPos[0], col: startPos[1], g: 0, h: calculateHeuristic(startPos[0], startPos[1],tempEndPos[0],tempEndPos[1]), f: 0, parent: null });
+      queue.push({
+        row: startPos[0],
+        col: startPos[1],
+        g: 0,
+        h: calculateHeuristic(
+          startPos[0],
+          startPos[1],
+          tempEndPos[0],
+          tempEndPos[1]
+        ),
+        f: 0,
+        parent: null,
+      });
       const processStep = () => {
-
         const windowPerformance = window.performance as any;
-        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+        totalMemory =
+          (totalMemory + windowPerformance.memory.usedJSHeapSize) / 2;
         //console.log(totalMemory);
         if (queue.length === 0 || foundEnd) {
-          const endTime = performance.now();  // จับเวลาเมื่อเสร็จสิ้น
+          const endTime = performance.now(); // จับเวลาเมื่อเสร็จสิ้น
           console.log(`Runtime: ${endTime - startTime} ms`);
-    
+
           setHeuristicSearchPerformance({
             runTime: endTime - startTime,
-            memUsage: totalMemory
-          }) 
-          setPlayState("STOPPED");
-    
+            memUsage: totalMemory,
+          });
+          setPlayState("END");
+
           return;
         }
-    
+
         const current = queue.sort((a, b) => a.f - b.f).shift()!;
         const { row, col, g, h, parent: currentParent } = current;
-    
-        if(colorFinderSize > 0) {
-          if(currentColorFinderState === 0 && colorPos[currentColorFinderIndex].colorPos[0] === row && colorPos[currentColorFinderIndex].colorPos[1] === col) {
-            console.log("Found Color Index",currentColorFinderIndex);
+
+        if (colorFinderSize > 0) {
+          if (
+            currentColorFinderState === 0 &&
+            colorPos[currentColorFinderIndex].colorPos[0] === row &&
+            colorPos[currentColorFinderIndex].colorPos[1] === col
+          ) {
+            console.log("Found Color Index", currentColorFinderIndex);
             currentColorFinderState = 1;
 
-            tempEndPos = [colorPos[currentColorFinderIndex].flagColorPos[0],colorPos[currentColorFinderIndex].flagColorPos[1]];
+            tempEndPos = [
+              colorPos[currentColorFinderIndex].flagColorPos[0],
+              colorPos[currentColorFinderIndex].flagColorPos[1],
+            ];
 
             setColorPos((prev) => {
               const current = [...prev];
               current[currentColorFinderIndex].isColorPosCollect = true;
               return current;
-            })
+            });
 
-            resetBoardForColorFinding(colorPos[currentColorFinderIndex].colorPos[0], colorPos[currentColorFinderIndex].colorPos[1],tempEndPos[0],tempEndPos[1]);
-          } else if(currentColorFinderState === 1 && colorPos[currentColorFinderIndex].flagColorPos[0] === row && colorPos[currentColorFinderIndex].flagColorPos[1] === col) {
+            resetBoardForColorFinding(
+              colorPos[currentColorFinderIndex].colorPos[0],
+              colorPos[currentColorFinderIndex].colorPos[1],
+              tempEndPos[0],
+              tempEndPos[1]
+            );
+          } else if (
+            currentColorFinderState === 1 &&
+            colorPos[currentColorFinderIndex].flagColorPos[0] === row &&
+            colorPos[currentColorFinderIndex].flagColorPos[1] === col
+          ) {
             const foundIndex = currentColorFinderIndex;
             console.log("Found Color Flag Index", foundIndex);
             currentColorFinderState = 0;
-            
+
             if (foundIndex + 1 < colorPos.length) {
-              tempEndPos = [colorPos[foundIndex + 1].colorPos[0], colorPos[foundIndex + 1].colorPos[1]];
+              tempEndPos = [
+                colorPos[foundIndex + 1].colorPos[0],
+                colorPos[foundIndex + 1].colorPos[1],
+              ];
             } else {
               tempEndPos = [endPos[0], endPos[1]];
             }
-            
+
             setColorPos((prev) => {
               const current = [...prev];
               current[foundIndex].isColorFlagCollect = true;
-              console.log("Index", foundIndex, current[foundIndex].isColorFlagCollect);
+              console.log(
+                "Index",
+                foundIndex,
+                current[foundIndex].isColorFlagCollect
+              );
               return current;
             });
-            
+
             resetBoardForColorFinding(
               colorPos[foundIndex].flagColorPos[0],
               colorPos[foundIndex].flagColorPos[1],
               tempEndPos[0],
               tempEndPos[1]
             );
-            
+
             colorFinderSize--;
             currentColorFinderIndex += 1;
           }
@@ -468,13 +570,13 @@ export default function Home() {
             console.log(`Runtime: ${endTime - startTime} ms`);
             setHeuristicSearchPerformance({
               runTime: endTime - startTime,
-              memUsage: totalMemory
-            }) 
-            setPlayState("STOPPED");
+              memUsage: totalMemory,
+            });
+            setPlayState("END");
             return;
           }
         }
-    
+
         for (let [dx, dy] of directions) {
           const newRow = row + dx;
           const newCol = col + dy;
@@ -488,7 +590,12 @@ export default function Home() {
           ) {
             visited[newRow][newCol] = true;
             const newG = g + 1;
-            const newH = calculateHeuristic(newRow, newCol,tempEndPos[0],tempEndPos[1]);
+            const newH = calculateHeuristic(
+              newRow,
+              newCol,
+              tempEndPos[0],
+              tempEndPos[1]
+            );
             const newF = newG + newH;
             queue.push({
               row: newRow,
@@ -496,42 +603,49 @@ export default function Home() {
               g: newG,
               h: newH,
               f: newF,
-              parent: [row, col]
+              parent: [row, col],
             });
             newGrid[newRow][newCol] = 10;
           }
         }
-    
+
         setGrid([...newGrid]);
-        const ID = requestAnimationFrame(processStep); 
+        const ID = requestAnimationFrame(processStep);
         setAnimationFrameId(ID);
       };
-    
-      const ID = requestAnimationFrame(processStep); 
+
+      const ID = requestAnimationFrame(processStep);
       setAnimationFrameId(ID);
     } else {
-      queue.push({ row: startPos[0], col: startPos[1], g: 0, h: calculateHeuristic(startPos[0], startPos[1],endPos[0],endPos[1]), f: 0, parent: null });
+      queue.push({
+        row: startPos[0],
+        col: startPos[1],
+        g: 0,
+        h: calculateHeuristic(startPos[0], startPos[1], endPos[0], endPos[1]),
+        f: 0,
+        parent: null,
+      });
       const processStep = () => {
-
         const windowPerformance = window.performance as any;
-        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+        totalMemory =
+          (totalMemory + windowPerformance.memory.usedJSHeapSize) / 2;
         //console.log(totalMemory);
         if (queue.length === 0 || foundEnd) {
-          const endTime = performance.now();  // จับเวลาเมื่อเสร็จสิ้น
+          const endTime = performance.now(); // จับเวลาเมื่อเสร็จสิ้น
           console.log(`Runtime: ${endTime - startTime} ms`);
-    
+
           setHeuristicSearchPerformance({
             runTime: endTime - startTime,
-            memUsage: totalMemory
-          }) 
-          setPlayState("STOPPED");
-    
+            memUsage: totalMemory,
+          });
+          setPlayState("END");
+
           return;
         }
-    
+
         const current = queue.sort((a, b) => a.f - b.f).shift()!;
         const { row, col, g, h, parent: currentParent } = current;
-    
+
         if (row === endPos[0] && col === endPos[1]) {
           foundEnd = true;
           setGrid([...newGrid]);
@@ -539,12 +653,12 @@ export default function Home() {
           console.log(`Runtime: ${endTime - startTime} ms`);
           setHeuristicSearchPerformance({
             runTime: endTime - startTime,
-            memUsage: totalMemory
-          }) 
-          setPlayState("STOPPED");
+            memUsage: totalMemory,
+          });
+          setPlayState("END");
           return;
         }
-    
+
         for (let [dx, dy] of directions) {
           const newRow = row + dx;
           const newCol = col + dy;
@@ -558,7 +672,12 @@ export default function Home() {
           ) {
             visited[newRow][newCol] = true;
             const newG = g + 1;
-            const newH = calculateHeuristic(newRow, newCol,endPos[0],endPos[1]);
+            const newH = calculateHeuristic(
+              newRow,
+              newCol,
+              endPos[0],
+              endPos[1]
+            );
             const newF = newG + newH;
             queue.push({
               row: newRow,
@@ -566,46 +685,56 @@ export default function Home() {
               g: newG,
               h: newH,
               f: newF,
-              parent: [row, col]
+              parent: [row, col],
             });
             newGrid[newRow][newCol] = 10;
           }
         }
-    
+
         setGrid([...newGrid]);
-        const ID = requestAnimationFrame(processStep); 
+        const ID = requestAnimationFrame(processStep);
         setAnimationFrameId(ID);
       };
-    
-      const ID = requestAnimationFrame(processStep); 
+
+      const ID = requestAnimationFrame(processStep);
       setAnimationFrameId(ID);
     }
   };
-  
+
   const handleVisual = () => {
 
-    if(playState !== "STOPPED") return;
+    if(playState === "END") {
+      clearBoard();
+      setColorPos(tempColorPos.map(item => ({ ...item })));
+      setPlayState("STOPPED");
+      return;
+    }
 
-    if(searchType === "BLIND") {
+    if (playState !== "STOPPED") return;
+
+    if (searchType === "BLIND") {
       handleFindPath();
-    } else if(searchType === "HEURISTIC") {
+    } else if (searchType === "HEURISTIC") {
       handleFindPathWithHeuristic();
     }
-  }
-  
+  };
 
   return (
     <div className="flex relative flex-col w-full h-full">
-      <div className={`bg-[#c5c5c5] pt-1 px-1 items-center absolute bottom-[20%] w-28 h-[500px] ml-3 ${selectState === "COLOR" ? 'flex flex-col' : 'hidden'}`}>
-          <div className="flex">
-              Pick Color
-          </div>
+      <div
+        className={`bg-[#c5c5c5] pt-1 px-1 items-center absolute bottom-[20%] w-28 h-[500px] ml-3 ${
+          selectState === "COLOR" ? "flex flex-col" : "hidden"
+        }`}
+      >
+        <div className="flex">Pick Color</div>
       </div>
       <div className="flex justify-center items-center w-full">HEADER</div>
       <div className="flex gap-x-5 flex-row mt-5 justify-center items-center">
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
-            selectState == "WALL" ? " bg-gray-300" : "cursor-pointer hover:bg-gray-200"
+            selectState == "WALL"
+              ? " bg-gray-300"
+              : "cursor-pointer hover:bg-gray-200"
           }`}
           onClick={() => handleClickChangeState("WALL")}
         >
@@ -616,18 +745,26 @@ export default function Home() {
         </div>
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
-            selectState == "START" ? " bg-gray-300" : "cursor-pointer hover:bg-gray-200"
+            selectState == "START"
+              ? " bg-gray-300"
+              : "cursor-pointer hover:bg-gray-200"
           }`}
           onClick={() => handleClickChangeState("START")}
         >
           <div className="flex justify-center items-center">
-            <Icon icon="material-symbols:play-arrow-rounded" width={20} height={20} />
+            <Icon
+              icon="material-symbols:play-arrow-rounded"
+              width={20}
+              height={20}
+            />
           </div>
           <div className="flex justify-center items-center">Start Point</div>
         </div>
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
-            selectState == "END" ? " bg-gray-300" : "cursor-pointer hover:bg-gray-200"
+            selectState == "END"
+              ? " bg-gray-300"
+              : "cursor-pointer hover:bg-gray-200"
           }`}
           onClick={() => handleClickChangeState("END")}
         >
@@ -638,26 +775,55 @@ export default function Home() {
         </div>
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
-            selectState == "COLOR" ? " bg-gray-300" : "cursor-pointer hover:bg-gray-200"
+            selectState == "COLOR"
+              ? " bg-gray-300"
+              : "cursor-pointer hover:bg-gray-200"
           }`}
           onClick={() => handleClickChangeState("COLOR")}
         >
           <div className="flex justify-center items-center mr-1">
             <Icon icon="ic:baseline-color-lens" width={20} height={20} />
           </div>
-          <div className="flex justify-center items-center">Color Collector</div>
+          <div className="flex justify-center items-center">
+            Color Collector
+          </div>
         </div>
       </div>
       <div className="flex flex-row gap-x-5 mt-5 w-full justify-center">
-          <div className={`flex px-2 py-1 rounded-md text-white ${searchType === "BLIND" ? 'bg-green-700' : 'cursor-pointer bg-green-400 hover:bg-green-300'}`} onClick={() => setSearchType("BLIND")}>
-            Blind Search
-          </div>
-          <div className={`flex px-2 py-1 rounded-md text-white border border-gray-200 ${playState === "STOPPED" ? 'cursor-pointer bg-[#888888] hover:bg-[#adadad]' : 'bg-[#6e6e6e]'}`} onClick={handleVisual}>
-             {playState === "STOPPED" ? 'Start Visual' : 'Runing Task..'}
-          </div>
-          <div className={`flex px-2 py-1 rounded-md text-white ${searchType === "HEURISTIC" ? 'bg-red-700' : 'cursor-pointer bg-red-400 hover:bg-red-300'}`} onClick={() => setSearchType("HEURISTIC")}>
-            Heuristic Search
-          </div>
+        <div
+          className={`flex px-2 py-1 rounded-md text-white ${
+            searchType === "BLIND"
+              ? "bg-green-700"
+              : "cursor-pointer bg-green-400 hover:bg-green-300"
+          }`}
+          onClick={() => setSearchType("BLIND")}
+        >
+          Blind Search
+        </div>
+        <div
+          className={`flex px-2 py-1 rounded-md text-white border border-gray-200 ${
+            playState === "STOPPED" || playState === "END"
+              ? "cursor-pointer bg-[#888888] hover:bg-[#adadad]"
+              : "bg-[#6e6e6e]"
+          }`}
+          onClick={handleVisual}
+        >
+          {playState === "STOPPED"
+            ? "Start Visual"
+            : playState === "END"
+            ? "Reset Board"
+            : "Running Task.."}
+        </div>
+        <div
+          className={`flex px-2 py-1 rounded-md text-white ${
+            searchType === "HEURISTIC"
+              ? "bg-red-700"
+              : "cursor-pointer bg-red-400 hover:bg-red-300"
+          }`}
+          onClick={() => setSearchType("HEURISTIC")}
+        >
+          Heuristic Search
+        </div>
       </div>
       <div className="flex mt-5 justify-center items-center w-full">
         <table
@@ -674,14 +840,20 @@ export default function Home() {
                       cell === 1
                         ? "bg-black"
                         : cell === 10
-                        ? "bg-blue-400" 
+                        ? "bg-blue-400"
                         : "bg-white hover:bg-gray-300"
                     }`}
                     onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
                     onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
                   >
-                    {rowIndex === startPos[0] && colIndex === startPos[1] && (
-                      <div className={`w-full h-full justify-center items-center ${colorPos.length > 0 && colorPos[0].isColorPosCollect ? 'hidden' : 'flex'}`}>
+                    {rowIndex === startPos[0] && colIndex === startPos[1] && colorPos && (
+                      <div
+                        className={`w-full h-full justify-center items-center ${
+                          colorPos.length > 0 && colorPos[0].isColorPosCollect
+                            ? "hidden"
+                            : "flex"
+                        }`}
+                      >
                         <Icon
                           icon="material-symbols:play-arrow-rounded"
                           width={20}
@@ -699,14 +871,23 @@ export default function Home() {
                       </div>
                     )}
                     {(() => {
-
-                      const matchedIndex = colorPos?.findIndex(({ colorPos }) => 
-                        colorPos[0] === rowIndex && colorPos[1] === colIndex
+                      const matchedIndex = colorPos?.findIndex(
+                        ({ colorPos }) =>
+                          colorPos[0] === rowIndex && colorPos[1] === colIndex
                       );
-                      const matchedFlag = matchedIndex !== -1 ? colorPos?.[matchedIndex] : undefined;
+                      const matchedFlag =
+                      matchedIndex !== undefined && matchedIndex !== -1 && colorPos
+                        ? colorPos[matchedIndex]
+                        : undefined;
 
                       return matchedFlag ? (
-                        <div className={`w-full h-full justify-center items-center ${colorPos[matchedIndex].isColorFlagCollect ? 'hidden' : 'flex'}`}>
+                        <div
+                          className={`w-full h-full justify-center items-center ${
+                            colorPos && matchedIndex !== undefined && colorPos[matchedIndex].isColorFlagCollect
+                              ? "hidden"
+                              : "flex"
+                          }`}
+                        >
                           <Icon
                             icon="material-symbols:circle"
                             width={20}
@@ -717,13 +898,25 @@ export default function Home() {
                       ) : null;
                     })()}
                     {(() => {
-                      const matchedIndex = colorPos?.findIndex(({ flagColorPos }) => 
-                        flagColorPos[0] === rowIndex && flagColorPos[1] === colIndex
+                      const matchedIndex = colorPos?.findIndex(
+                        ({ flagColorPos }) =>
+                          flagColorPos[0] === rowIndex &&
+                          flagColorPos[1] === colIndex
                       );
-                      const matchedFlag = matchedIndex !== -1 ? colorPos?.[matchedIndex] : undefined;
+                      const matchedFlag =
+                        matchedIndex !== -1 && matchedIndex !== undefined
+                          ? colorPos?.[matchedIndex]
+                          : undefined;
 
                       return matchedFlag ? (
-                        <div className={`w-full h-full justify-center items-center ${(matchedIndex+1 < colorPos.length) && colorPos[matchedIndex+1].isColorPosCollect ? 'hidden' : 'flex'}`}>
+                        <div
+                          className={`w-full h-full justify-center items-center ${
+                            colorPos && matchedIndex !== undefined && matchedIndex + 1 < colorPos.length &&
+                            colorPos[matchedIndex + 1].isColorPosCollect
+                              ? "hidden"
+                              : "flex"
+                          }`}
+                        >
                           <Icon
                             icon="material-symbols:flag-rounded"
                             width={20}
@@ -733,8 +926,6 @@ export default function Home() {
                         </div>
                       ) : null;
                     })()}
-
-
                   </td>
                 ))}
               </tr>
@@ -742,29 +933,25 @@ export default function Home() {
           </tbody>
         </table>
       </div>
-      <div className="flex w-full flex-row justify-center gap-x-20">
-          <div className="flex flex-row gap-x-2 mt-2 bg-green-500 rounded-full px-3 py-1">
-              <div className="flex">
-                  Blind Search:
-              </div>
-              <div className="flex">
-                {Math.round(blindSearchPerformance.runTime)} ms
-              </div>
-              <div className="flex">
-                  {Math.round(blindSearchPerformance.memUsage/1000)} kbytes
-              </div>
+      <div className="flex w-full flex-row justify-center gap-x-20 mt-3">
+        <div className="flex flex-row gap-x-2 mt-2 bg-green-500 rounded-full px-3 py-1">
+          <div className="flex">Blind Search:</div>
+          <div className="flex">
+            {Math.round(blindSearchPerformance.runTime)} ms
           </div>
-          <div className="flex flex-row gap-x-2 mt-2 bg-red-500 rounded-full px-3 py-1">
-              <div className="flex">
-                  Heuristic Search:
-              </div>
-              <div className="flex">
-                  {Math.round(heuristicPerformance.runTime)} ms
-              </div>
-              <div className="flex">
-                {Math.round(heuristicPerformance.memUsage/1000)} kbytes
-              </div>
+          <div className="flex">
+            {Math.round(blindSearchPerformance.memUsage / 1000)} kbytes
           </div>
+        </div>
+        <div className="flex flex-row gap-x-2 mt-2 bg-red-500 rounded-full px-3 py-1">
+          <div className="flex">Heuristic Search:</div>
+          <div className="flex">
+            {Math.round(heuristicPerformance.runTime)} ms
+          </div>
+          <div className="flex">
+            {Math.round(heuristicPerformance.memUsage / 1000)} kbytes
+          </div>
+        </div>
       </div>
     </div>
   );
