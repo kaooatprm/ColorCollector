@@ -33,6 +33,8 @@ export default function Home() {
   const [selectState, setSelectState] = useState<string>("WALL");
   const [startPos, setStartPos] = useState<[number, number]>([13, 20]);
   const [endPos, setEndPos] = useState<[number, number]>([13, 50]);
+  //const [startPos, setStartPos] = useState<[number, number]>([17, 35]);
+  //const [endPos, setEndPos] = useState<[number, number]>([1, 10]);
 
   const [colorPos, setColorPos] = useState<ColorObject[]>(mockData);
 
@@ -50,8 +52,8 @@ export default function Home() {
     const newGrid = [...grid];
     clearBoard();
 
-    const isColorPosMatch = colorPos.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
-    const isFlagColorPosMatch = colorPos.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
+    const isColorPosMatch = colorPos?.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
+    const isFlagColorPosMatch = colorPos?.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
   
     if (isColorPosMatch || isFlagColorPosMatch) return;
   
@@ -78,8 +80,8 @@ export default function Home() {
   const handleMouseEnter = (row: number, col: number) => {
     if(isPlaying) return;
 
-    const isColorPosMatch = colorPos.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
-    const isFlagColorPosMatch = colorPos.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
+    const isColorPosMatch = colorPos?.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
+    const isFlagColorPosMatch = colorPos?.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
   
     if (isColorPosMatch || isFlagColorPosMatch) return;
     if (!isMouseDown || selectState !== "WALL") return;
@@ -159,13 +161,14 @@ export default function Home() {
     }
 
     if(colorPos) {
-      console.log("Come");
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
     
       const processStep = () => {
-        console.log("Search....")
+        const windowPerformance = window.performance as any;
+        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+
         if(queueIndex >= queue.length || foundEnd) {
           const endTime = performance.now();
           console.log("queueIndex",queueIndex)
@@ -231,14 +234,12 @@ export default function Home() {
           }   
         }
     
-        // เรียก requestAnimationFrame เพื่อให้ processStep ทำงานในเฟรมถัดไป
         if (!foundEnd) {
           const ID = requestAnimationFrame(processStep);
           setAnimationFrameId(ID); 
         }
       };
     
-      // เริ่มต้นกระบวนการด้วย requestAnimationFrame
       const ID = requestAnimationFrame(processStep);
       setAnimationFrameId(ID);
     } else {
@@ -308,11 +309,9 @@ export default function Home() {
   const handleFindPathWithHeuristic = () => {
     setIsPlaying(true);
     if (animationFrameId !== null) {
-      // ยกเลิกการทำงานก่อนหน้า (หากมี)
       cancelAnimationFrame(animationFrameId);
     }
   
-    // เริ่มจับเวลาและหน่วยความจำ
     const windowPerformance = window.performance as any;
     let totalMemory = windowPerformance.memory.usedJSHeapSize;
     const startTime = performance.now(); // เริ่มจับเวลา
@@ -323,89 +322,208 @@ export default function Home() {
       [0, 1], [1, 0], [0, -1], [-1, 0], // 4 ทิศทาง: ขวา, ล่าง, ซ้าย, ขึ้น
     ];
   
-    const calculateHeuristic = (row: number, col: number) => {
-      return Math.abs(row - endPos[0]) + Math.abs(col - endPos[1]);
+    const calculateHeuristic = (row: number, col: number,endRow: number, endCol: number) => {
+      return Math.abs(row - endRow) + Math.abs(col - endCol);
     };
   
-    const queue: Array<{ row: number, col: number, g: number, h: number, f: number, parent: [number, number] | null }> = [];
-    const visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
-    const parent: Array<Array<[number, number] | null>> = Array.from({ length: numRows }, () =>
+    let queue: Array<{ row: number, col: number, g: number, h: number, f: number, parent: [number, number] | null }> = [];
+    let visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+    let parent: Array<Array<[number, number] | null>> = Array.from({ length: numRows }, () =>
       Array(numCols).fill(null)
     );
   
-    queue.push({ row: startPos[0], col: startPos[1], g: 0, h: calculateHeuristic(startPos[0], startPos[1]), f: 0, parent: null });
     visited[startPos[0]][startPos[1]] = true;
     newGrid[startPos[0]][startPos[1]] = 10;
     let foundEnd = false;
   
-    const processStep = () => {
+    const resetBoardForColorFinding = (startRow: number,startCol: number,endRow: number,endCol: number) => {
 
-      const windowPerformance = window.performance as any;
-      totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
-      console.log(totalMemory);
-      if (queue.length === 0 || foundEnd) {
-        const endTime = performance.now();  // จับเวลาเมื่อเสร็จสิ้น
-        console.log(`Runtime: ${endTime - startTime} ms`);
-  
-        setHeuristicSearchPerformance({
-          runTime: endTime - startTime,
-          memUsage: totalMemory
-        }) 
-        setIsPlaying(false);
-  
-        return;
-      }
-  
-      const current = queue.sort((a, b) => a.f - b.f).shift()!;
-      const { row, col, g, h, parent: currentParent } = current;
-  
-      if (row === endPos[0] && col === endPos[1]) {
-        foundEnd = true;
-        setGrid([...newGrid]);
-        const endTime = performance.now();
-        console.log(`Runtime: ${endTime - startTime} ms`);
-        setHeuristicSearchPerformance({
-          runTime: endTime - startTime,
-          memUsage: totalMemory
-        }) 
-        setIsPlaying(false);
-        return;
-      }
-  
-      for (let [dx, dy] of directions) {
-        const newRow = row + dx;
-        const newCol = col + dy;
-        if (
-          newRow >= 0 &&
-          newRow < numRows &&
-          newCol >= 0 &&
-          newCol < numCols &&
-          !visited[newRow][newCol] &&
-          grid[newRow][newCol] !== 1
-        ) {
-          visited[newRow][newCol] = true;
-          const newG = g + 1;
-          const newH = calculateHeuristic(newRow, newCol);
-          const newF = newG + newH;
-          queue.push({
-            row: newRow,
-            col: newCol,
-            g: newG,
-            h: newH,
-            f: newF,
-            parent: [row, col]
-          });
-          newGrid[newRow][newCol] = 10;
-        }
-      }
-  
+      newGrid.forEach((row, rowIndex) => {
+        row.forEach((col, colIndex) => {
+          if (newGrid[rowIndex][colIndex] !== 1) {
+            newGrid[rowIndex][colIndex] = 0;
+          }
+        });
+      });
+      queue = [];
+      queue.push({ row: startRow, col: startCol, g: 0, h: calculateHeuristic(startRow, startCol,endRow,endCol), f: 0, parent: null });
+      visited = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+      parent = Array.from({ length: numRows }, () => Array(numCols).fill(null));
+
+      visited[startRow][startCol] = true;
+      newGrid[startRow][startCol] = 10;
       setGrid([...newGrid]);
+    }
+
+    if(colorPos) {
+      
+      let colorFinderSize = colorPos.length;
+      let currentColorFinderIndex = 0;
+      let currentColorFinderState = 0; // 0 = find color, 1 = find hole
+      let tempEndPos = [colorPos[currentColorFinderIndex].colorPos[0],colorPos[currentColorFinderIndex].colorPos[1]];
+
+      queue.push({ row: startPos[0], col: startPos[1], g: 0, h: calculateHeuristic(startPos[0], startPos[1],tempEndPos[0],tempEndPos[1]), f: 0, parent: null });
+      const processStep = () => {
+
+        const windowPerformance = window.performance as any;
+        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+        //console.log(totalMemory);
+        if (queue.length === 0 || foundEnd) {
+          const endTime = performance.now();  // จับเวลาเมื่อเสร็จสิ้น
+          console.log(`Runtime: ${endTime - startTime} ms`);
+    
+          setHeuristicSearchPerformance({
+            runTime: endTime - startTime,
+            memUsage: totalMemory
+          }) 
+          setIsPlaying(false);
+    
+          return;
+        }
+    
+        const current = queue.sort((a, b) => a.f - b.f).shift()!;
+        const { row, col, g, h, parent: currentParent } = current;
+    
+        if(colorFinderSize > 0) {
+          if(currentColorFinderState === 0 && colorPos[currentColorFinderIndex].colorPos[0] === row && colorPos[currentColorFinderIndex].colorPos[1] === col) {
+            console.log("Found Color Index",currentColorFinderIndex);
+            currentColorFinderState = 1;
+
+            tempEndPos = [colorPos[currentColorFinderIndex].flagColorPos[0],colorPos[currentColorFinderIndex].flagColorPos[1]];
+            resetBoardForColorFinding(colorPos[currentColorFinderIndex].colorPos[0], colorPos[currentColorFinderIndex].colorPos[1],tempEndPos[0],tempEndPos[1]);
+          } else if(currentColorFinderState === 1 && colorPos[currentColorFinderIndex].flagColorPos[0] === row && colorPos[currentColorFinderIndex].flagColorPos[1] === col) {
+            console.log("Found Color Flag Index",currentColorFinderIndex);
+            currentColorFinderState = 0;
+            
+            if(currentColorFinderIndex+1 < colorPos.length) {
+              tempEndPos = [colorPos[currentColorFinderIndex+1].colorPos[0],colorPos[currentColorFinderIndex+1].colorPos[1]];
+            } else {
+              tempEndPos = [endPos[0],endPos[1]];
+            }
+            resetBoardForColorFinding(colorPos[currentColorFinderIndex].flagColorPos[0], colorPos[currentColorFinderIndex].flagColorPos[1],tempEndPos[0],tempEndPos[1]);;
+            colorFinderSize--;
+            currentColorFinderIndex+=1;
+          }
+        } else {
+          if (row === endPos[0] && col === endPos[1]) {
+            foundEnd = true;
+            setGrid([...newGrid]);
+            const endTime = performance.now();
+            console.log(`Runtime: ${endTime - startTime} ms`);
+            setHeuristicSearchPerformance({
+              runTime: endTime - startTime,
+              memUsage: totalMemory
+            }) 
+            setIsPlaying(false);
+            return;
+          }
+        }
+    
+        for (let [dx, dy] of directions) {
+          const newRow = row + dx;
+          const newCol = col + dy;
+          if (
+            newRow >= 0 &&
+            newRow < numRows &&
+            newCol >= 0 &&
+            newCol < numCols &&
+            !visited[newRow][newCol] &&
+            grid[newRow][newCol] !== 1
+          ) {
+            visited[newRow][newCol] = true;
+            const newG = g + 1;
+            const newH = calculateHeuristic(newRow, newCol,tempEndPos[0],tempEndPos[1]);
+            const newF = newG + newH;
+            queue.push({
+              row: newRow,
+              col: newCol,
+              g: newG,
+              h: newH,
+              f: newF,
+              parent: [row, col]
+            });
+            newGrid[newRow][newCol] = 10;
+          }
+        }
+    
+        setGrid([...newGrid]);
+        const ID = requestAnimationFrame(processStep); 
+        setAnimationFrameId(ID);
+      };
+    
       const ID = requestAnimationFrame(processStep); 
       setAnimationFrameId(ID);
-    };
-  
-    const ID = requestAnimationFrame(processStep); 
-    setAnimationFrameId(ID);
+    } else {
+      queue.push({ row: startPos[0], col: startPos[1], g: 0, h: calculateHeuristic(startPos[0], startPos[1],endPos[0],endPos[1]), f: 0, parent: null });
+      const processStep = () => {
+
+        const windowPerformance = window.performance as any;
+        totalMemory = (totalMemory + windowPerformance.memory.usedJSHeapSize)/2;
+        //console.log(totalMemory);
+        if (queue.length === 0 || foundEnd) {
+          const endTime = performance.now();  // จับเวลาเมื่อเสร็จสิ้น
+          console.log(`Runtime: ${endTime - startTime} ms`);
+    
+          setHeuristicSearchPerformance({
+            runTime: endTime - startTime,
+            memUsage: totalMemory
+          }) 
+          setIsPlaying(false);
+    
+          return;
+        }
+    
+        const current = queue.sort((a, b) => a.f - b.f).shift()!;
+        const { row, col, g, h, parent: currentParent } = current;
+    
+        if (row === endPos[0] && col === endPos[1]) {
+          foundEnd = true;
+          setGrid([...newGrid]);
+          const endTime = performance.now();
+          console.log(`Runtime: ${endTime - startTime} ms`);
+          setHeuristicSearchPerformance({
+            runTime: endTime - startTime,
+            memUsage: totalMemory
+          }) 
+          setIsPlaying(false);
+          return;
+        }
+    
+        for (let [dx, dy] of directions) {
+          const newRow = row + dx;
+          const newCol = col + dy;
+          if (
+            newRow >= 0 &&
+            newRow < numRows &&
+            newCol >= 0 &&
+            newCol < numCols &&
+            !visited[newRow][newCol] &&
+            grid[newRow][newCol] !== 1
+          ) {
+            visited[newRow][newCol] = true;
+            const newG = g + 1;
+            const newH = calculateHeuristic(newRow, newCol,endPos[0],endPos[1]);
+            const newF = newG + newH;
+            queue.push({
+              row: newRow,
+              col: newCol,
+              g: newG,
+              h: newH,
+              f: newF,
+              parent: [row, col]
+            });
+            newGrid[newRow][newCol] = 10;
+          }
+        }
+    
+        setGrid([...newGrid]);
+        const ID = requestAnimationFrame(processStep); 
+        setAnimationFrameId(ID);
+      };
+    
+      const ID = requestAnimationFrame(processStep); 
+      setAnimationFrameId(ID);
+    }
   };
   
   
@@ -512,7 +630,7 @@ export default function Home() {
                       </div>
                     )}
                     {(() => {
-                      const matchedFlag = colorPos.find(({ colorPos }) => 
+                      const matchedFlag = colorPos?.find(({ colorPos }) => 
                         colorPos[0] === rowIndex && colorPos[1] === colIndex
                       );
                       return matchedFlag ? (
@@ -527,7 +645,7 @@ export default function Home() {
                       ) : null;
                     })()}
                     {(() => {
-                      const matchedFlag = colorPos.find(({ flagColorPos }) => 
+                      const matchedFlag = colorPos?.find(({ flagColorPos }) => 
                         flagColorPos[0] === rowIndex && flagColorPos[1] === colIndex
                       );
                       return matchedFlag ? (
