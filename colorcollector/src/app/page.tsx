@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
 interface Performance {
@@ -13,16 +13,22 @@ interface ColorObject {
   colorType: string;
   colorPos: number[];
   flagColorPos: number[];
+  isColorPosCollect: boolean;
+  isColorFlagCollect: boolean;
 }
 
 const mockData = [{
   colorType: "#DB1D1D",
   colorPos: [8,35],
-  flagColorPos: [17,35]
+  flagColorPos: [17,35],
+  isColorPosCollect: false,
+  isColorFlagCollect: false
 },{
   colorType: "#10DA60",
   colorPos: [1,10],
-  flagColorPos: [25,55]
+  flagColorPos: [25,55],
+  isColorPosCollect: false,
+  isColorFlagCollect: false
 }]
 
 export default function Home() {
@@ -31,6 +37,7 @@ export default function Home() {
 
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [selectState, setSelectState] = useState<string>("WALL");
+  const [searchType, setSearchType] = useState<string>("BLIND");
   const [startPos, setStartPos] = useState<[number, number]>([13, 20]);
   const [endPos, setEndPos] = useState<[number, number]>([13, 50]);
   //const [startPos, setStartPos] = useState<[number, number]>([17, 35]);
@@ -38,7 +45,7 @@ export default function Home() {
 
   const [colorPos, setColorPos] = useState<ColorObject[]>(mockData);
 
-  const [isPlaying,setIsPlaying] = useState<boolean>(false);
+  const [playState,setPlayState] = useState<string>("STOPPED");
   const [blindSearchPerformance, setBlindSearchPerformance] = useState<Performance>({runTime: 0, memUsage: 0});
   const [heuristicPerformance, setHeuristicSearchPerformance] = useState<Performance>({runTime: 0, memUsage: 0});
   const [animationFrameId, setAnimationFrameId] = useState<number|null>(null);
@@ -48,7 +55,7 @@ export default function Home() {
   );
 
   const handleMouseDown = (row: number, col: number) => {
-    if(isPlaying) return;
+    if(playState !== "STOPPED") return;
     const newGrid = [...grid];
     clearBoard();
 
@@ -78,7 +85,7 @@ export default function Home() {
   };
 
   const handleMouseEnter = (row: number, col: number) => {
-    if(isPlaying) return;
+    if(playState !== "STOPPED") return;
 
     const isColorPosMatch = colorPos?.some(({ colorPos }) => colorPos[0] === row && colorPos[1] === col);
     const isFlagColorPosMatch = colorPos?.some(({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col);
@@ -112,8 +119,13 @@ export default function Home() {
 
   }
 
+  useEffect(() => {
+    console.log(colorPos);
+    console.log("----------");
+  },[colorPos]);
+
   const handleFindPath = () => {
-    setIsPlaying(true);
+    setPlayState("START");
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
@@ -161,6 +173,7 @@ export default function Home() {
     }
 
     if(colorPos) {
+      setColorPos(mockData);
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -178,7 +191,7 @@ export default function Home() {
             runTime: endTime - startTime,
             memUsage: totalMemory
           })  
-          setIsPlaying(false);
+          setPlayState("STOPPED");
           return;
         }
     
@@ -207,12 +220,33 @@ export default function Home() {
                 console.log("Found Color Index",currentColorFinderIndex);
                 currentColorFinderState = 1;
                 resetBoardForColorFinding(colorPos[currentColorFinderIndex].colorPos[0], colorPos[currentColorFinderIndex].colorPos[1]);
-              } else if(currentColorFinderState === 1 && colorPos[currentColorFinderIndex].flagColorPos[0] === newRow && colorPos[currentColorFinderIndex].flagColorPos[1] === newCol) {
-                console.log("Found Color Flag Index",currentColorFinderIndex);
+
+                setColorPos((prev) => {
+                  const current = [...prev];
+                  current[currentColorFinderIndex].isColorPosCollect = true;
+                  return current;
+                });
+
+              } else if (
+                currentColorFinderState === 1 &&
+                colorPos[currentColorFinderIndex].flagColorPos[0] === newRow &&
+                colorPos[currentColorFinderIndex].flagColorPos[1] === newCol
+              ) {
+                const foundIndex = currentColorFinderIndex; 
+                console.log("Found Color Flag Index", foundIndex);
+                
                 currentColorFinderState = 0;
-                resetBoardForColorFinding(colorPos[currentColorFinderIndex].flagColorPos[0], colorPos[currentColorFinderIndex].flagColorPos[1]);
+                resetBoardForColorFinding(colorPos[foundIndex].flagColorPos[0], colorPos[foundIndex].flagColorPos[1]);
                 colorFinderSize--;
-                currentColorFinderIndex+=1;
+              
+                setColorPos((prev) => {
+                  const current = [...prev];
+                  current[foundIndex].isColorFlagCollect = true;
+                  console.log("Index", foundIndex, current[foundIndex].isColorFlagCollect);
+                  return current;
+                });
+              
+                currentColorFinderIndex += 1; 
               }
             } else {
               if (newRow === endPos[0] && newCol === endPos[1]) {
@@ -225,7 +259,7 @@ export default function Home() {
                   runTime: endTime - startTime,
                   memUsage: totalMemory
                 })  
-                setIsPlaying(false);
+                setPlayState("STOPPED");
                 foundEnd = true;
                 setGrid([...newGrid]);
                 return;
@@ -255,7 +289,7 @@ export default function Home() {
             runTime: endTime - startTime,
             memUsage: totalMemory
           })  
-          setIsPlaying(false);
+          setPlayState("STOPPED");
           return;
         }
     
@@ -287,7 +321,7 @@ export default function Home() {
                 runTime: endTime - startTime,
                 memUsage: totalMemory
               })  
-              setIsPlaying(false);
+              setPlayState("STOPPED");
               foundEnd = true;
               setGrid([...newGrid]);
               return;
@@ -307,7 +341,7 @@ export default function Home() {
   
   
   const handleFindPathWithHeuristic = () => {
-    setIsPlaying(true);
+    setPlayState("START");
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
@@ -356,7 +390,7 @@ export default function Home() {
     }
 
     if(colorPos) {
-      
+      setColorPos(mockData);
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -376,7 +410,7 @@ export default function Home() {
             runTime: endTime - startTime,
             memUsage: totalMemory
           }) 
-          setIsPlaying(false);
+          setPlayState("STOPPED");
     
           return;
         }
@@ -390,19 +424,41 @@ export default function Home() {
             currentColorFinderState = 1;
 
             tempEndPos = [colorPos[currentColorFinderIndex].flagColorPos[0],colorPos[currentColorFinderIndex].flagColorPos[1]];
+
+            setColorPos((prev) => {
+              const current = [...prev];
+              current[currentColorFinderIndex].isColorPosCollect = true;
+              return current;
+            })
+
             resetBoardForColorFinding(colorPos[currentColorFinderIndex].colorPos[0], colorPos[currentColorFinderIndex].colorPos[1],tempEndPos[0],tempEndPos[1]);
           } else if(currentColorFinderState === 1 && colorPos[currentColorFinderIndex].flagColorPos[0] === row && colorPos[currentColorFinderIndex].flagColorPos[1] === col) {
-            console.log("Found Color Flag Index",currentColorFinderIndex);
+            const foundIndex = currentColorFinderIndex;
+            console.log("Found Color Flag Index", foundIndex);
             currentColorFinderState = 0;
             
-            if(currentColorFinderIndex+1 < colorPos.length) {
-              tempEndPos = [colorPos[currentColorFinderIndex+1].colorPos[0],colorPos[currentColorFinderIndex+1].colorPos[1]];
+            if (foundIndex + 1 < colorPos.length) {
+              tempEndPos = [colorPos[foundIndex + 1].colorPos[0], colorPos[foundIndex + 1].colorPos[1]];
             } else {
-              tempEndPos = [endPos[0],endPos[1]];
+              tempEndPos = [endPos[0], endPos[1]];
             }
-            resetBoardForColorFinding(colorPos[currentColorFinderIndex].flagColorPos[0], colorPos[currentColorFinderIndex].flagColorPos[1],tempEndPos[0],tempEndPos[1]);;
+            
+            setColorPos((prev) => {
+              const current = [...prev];
+              current[foundIndex].isColorFlagCollect = true;
+              console.log("Index", foundIndex, current[foundIndex].isColorFlagCollect);
+              return current;
+            });
+            
+            resetBoardForColorFinding(
+              colorPos[foundIndex].flagColorPos[0],
+              colorPos[foundIndex].flagColorPos[1],
+              tempEndPos[0],
+              tempEndPos[1]
+            );
+            
             colorFinderSize--;
-            currentColorFinderIndex+=1;
+            currentColorFinderIndex += 1;
           }
         } else {
           if (row === endPos[0] && col === endPos[1]) {
@@ -414,7 +470,7 @@ export default function Home() {
               runTime: endTime - startTime,
               memUsage: totalMemory
             }) 
-            setIsPlaying(false);
+            setPlayState("STOPPED");
             return;
           }
         }
@@ -468,7 +524,7 @@ export default function Home() {
             runTime: endTime - startTime,
             memUsage: totalMemory
           }) 
-          setIsPlaying(false);
+          setPlayState("STOPPED");
     
           return;
         }
@@ -485,7 +541,7 @@ export default function Home() {
             runTime: endTime - startTime,
             memUsage: totalMemory
           }) 
-          setIsPlaying(false);
+          setPlayState("STOPPED");
           return;
         }
     
@@ -526,6 +582,16 @@ export default function Home() {
     }
   };
   
+  const handleVisual = () => {
+
+    if(playState !== "STOPPED") return;
+
+    if(searchType === "BLIND") {
+      handleFindPath();
+    } else if(searchType === "HEURISTIC") {
+      handleFindPathWithHeuristic();
+    }
+  }
   
 
   return (
@@ -557,7 +623,7 @@ export default function Home() {
           <div className="flex justify-center items-center">
             <Icon icon="material-symbols:play-arrow-rounded" width={20} height={20} />
           </div>
-          <div className="flex justify-center items-center">Start</div>
+          <div className="flex justify-center items-center">Start Point</div>
         </div>
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
@@ -583,10 +649,13 @@ export default function Home() {
         </div>
       </div>
       <div className="flex flex-row gap-x-5 mt-5 w-full justify-center">
-          <div className="flex px-2 py-1 rounded-md text-white cursor-pointer bg-green-600 hover:bg-green-500" onClick={handleFindPath}>
+          <div className={`flex px-2 py-1 rounded-md text-white ${searchType === "BLIND" ? 'bg-green-700' : 'cursor-pointer bg-green-400 hover:bg-green-300'}`} onClick={() => setSearchType("BLIND")}>
             Blind Search
           </div>
-          <div className="flex px-2 py-1 rounded-md text-white cursor-pointer bg-red-600 hover:bg-red-500" onClick={handleFindPathWithHeuristic}>
+          <div className={`flex px-2 py-1 rounded-md text-white border border-gray-200 ${playState === "STOPPED" ? 'cursor-pointer bg-[#888888] hover:bg-[#adadad]' : 'bg-[#6e6e6e]'}`} onClick={handleVisual}>
+             {playState === "STOPPED" ? 'Start Visual' : 'Runing Task..'}
+          </div>
+          <div className={`flex px-2 py-1 rounded-md text-white ${searchType === "HEURISTIC" ? 'bg-red-700' : 'cursor-pointer bg-red-400 hover:bg-red-300'}`} onClick={() => setSearchType("HEURISTIC")}>
             Heuristic Search
           </div>
       </div>
@@ -612,7 +681,7 @@ export default function Home() {
                     onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
                   >
                     {rowIndex === startPos[0] && colIndex === startPos[1] && (
-                      <div className="flex w-full h-full justify-center items-center">
+                      <div className={`w-full h-full justify-center items-center ${colorPos.length > 0 && colorPos[0].isColorPosCollect ? 'hidden' : 'flex'}`}>
                         <Icon
                           icon="material-symbols:play-arrow-rounded"
                           width={20}
@@ -630,11 +699,14 @@ export default function Home() {
                       </div>
                     )}
                     {(() => {
-                      const matchedFlag = colorPos?.find(({ colorPos }) => 
+
+                      const matchedIndex = colorPos?.findIndex(({ colorPos }) => 
                         colorPos[0] === rowIndex && colorPos[1] === colIndex
                       );
+                      const matchedFlag = matchedIndex !== -1 ? colorPos?.[matchedIndex] : undefined;
+
                       return matchedFlag ? (
-                        <div className="flex w-full h-full justify-center items-center">
+                        <div className={`w-full h-full justify-center items-center ${colorPos[matchedIndex].isColorFlagCollect ? 'hidden' : 'flex'}`}>
                           <Icon
                             icon="material-symbols:circle"
                             width={20}
@@ -645,11 +717,13 @@ export default function Home() {
                       ) : null;
                     })()}
                     {(() => {
-                      const matchedFlag = colorPos?.find(({ flagColorPos }) => 
+                      const matchedIndex = colorPos?.findIndex(({ flagColorPos }) => 
                         flagColorPos[0] === rowIndex && flagColorPos[1] === colIndex
                       );
+                      const matchedFlag = matchedIndex !== -1 ? colorPos?.[matchedIndex] : undefined;
+
                       return matchedFlag ? (
-                        <div className="flex w-full h-full justify-center items-center">
+                        <div className={`w-full h-full justify-center items-center ${(matchedIndex+1 < colorPos.length) && colorPos[matchedIndex+1].isColorPosCollect ? 'hidden' : 'flex'}`}>
                           <Icon
                             icon="material-symbols:flag-rounded"
                             width={20}
