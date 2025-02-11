@@ -115,23 +115,6 @@ const colorDataList = [
   },
 ];
 
-const mockData = [
-  {
-    colorType: "#DB1D1D",
-    colorPos: [8, 35],
-    flagColorPos: [17, 35],
-    isColorPosCollect: false,
-    isColorFlagCollect: false,
-  },
-  {
-    colorType: "#10DA60",
-    colorPos: [1, 10],
-    flagColorPos: [25, 55],
-    isColorPosCollect: false,
-    isColorFlagCollect: false,
-  },
-];
-
 export default function Home() {
   const numRows = 30;
   const numCols = 80;
@@ -223,34 +206,36 @@ export default function Home() {
       );
   
       if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
-        if(selectState === "COLOR") {
-          console.log("Found");
-  
+        if (selectState === "COLOR") {
           const foundIndex = isColorPosMatch !== -1 ? isColorPosMatch : isFlagColorPosMatch;
-  
-          const realIndex = Math.floor(selectedColorIndex/2);
-  
-          if(isColorPosMatch !== -1 && realIndex===foundIndex) {
-            setColorPos((prev) => {
-  
-              const currentData = [...prev];
-              currentData[foundIndex].colorPos = [9999,9999];
-  
-              return currentData;
-            });
-          } else if(isFlagColorPosMatch !== -1 && realIndex===foundIndex) {
-            setColorPos((prev) => {
-  
-              const currentData = [...prev];
-              currentData[foundIndex].flagColorPos = [9999,9999];
-  
-              return currentData;
-            });
-          }
-  
-          console.log(realIndex,foundIndex)
+        
+          console.log("Found", foundIndex, colorPos[foundIndex].colorType, colorDataList[selectedColorIndex].colorStyle);
+        
+          setColorPos((prev) => {
+            const currentData = [...prev];
+        
+            if (
+              isColorPosMatch !== -1 &&
+              currentData[foundIndex].colorType === colorDataList[selectedColorIndex].colorStyle &&
+              selectedColorIndex % 2 === 0
+            ) {
+              currentData[foundIndex].colorPos = [9999, 9999];
+            } else if (
+              isFlagColorPosMatch !== -1 &&
+              currentData[foundIndex].colorType === colorDataList[selectedColorIndex].colorStyle &&
+              selectedColorIndex % 2 !== 0
+            ) {
+              currentData[foundIndex].flagColorPos = [9999, 9999];
+            }
+        
+            return currentData.filter(
+              (item) => !(item.colorPos[0] === 9999 && item.colorPos[1] === 9999 && item.flagColorPos[0] === 9999 && item.flagColorPos[1] === 9999)
+            );
+          });
+        
           console.log(colorPos);
         }
+        
         return;
       }
 
