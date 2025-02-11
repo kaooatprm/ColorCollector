@@ -144,7 +144,7 @@ export default function Home() {
   //const [startPos, setStartPos] = useState<[number, number]>([17, 35]);
   //const [endPos, setEndPos] = useState<[number, number]>([1, 10]);
 
-  const [tempColorPos, setTempColorPos] = useState<ColorObject[]>([]);
+  //const [tempColorPos, setTempColorPos] = useState<ColorObject[]>([]);
   const [colorPos, setColorPos] = useState<ColorObject[]>([]);
   const [selectedColorIndex, setSelectedColorIndex] = useState<number>(0);
 
@@ -164,34 +164,97 @@ export default function Home() {
     const newGrid = [...grid];
     clearBoard();
 
-    const isColorPosMatch = colorPos?.some(
-      ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
-    );
-    const isFlagColorPosMatch = colorPos?.some(
-      ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
-    );
-
-    if (isColorPosMatch || isFlagColorPosMatch) return;
-
     if (selectState === "WALL") {
       if (row === endPos[0] && col === endPos[1]) return;
       if (row === startPos[0] && col === startPos[1]) return;
+      const isColorPosMatch = colorPos.findIndex(
+        ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+      );
+      const isFlagColorPosMatch = colorPos.findIndex(
+        ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+      );
+
+      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+        return;
+      }
       newGrid[row][col] = newGrid[row][col] === 1 ? 0 : 1;
       setIsMouseDown(true);
     } else if (selectState === "START") {
       if (startPos) newGrid[startPos[0]][startPos[1]] = 0;
       if (row === endPos[0] && col === endPos[1]) return;
+      const isColorPosMatch = colorPos.findIndex(
+        ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+      );
+      const isFlagColorPosMatch = colorPos.findIndex(
+        ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+      );
+
+      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+        return;
+      }
       newGrid[row][col] = 2;
       setStartPos([row, col]);
     } else if (selectState === "END") {
       if (endPos) newGrid[endPos[0]][endPos[1]] = 0;
       if (row === startPos[0] && col === startPos[1]) return;
+      const isColorPosMatch = colorPos.findIndex(
+        ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+      );
+      const isFlagColorPosMatch = colorPos.findIndex(
+        ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+      );
+
+      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+        return;
+      }
       newGrid[row][col] = 3;
       setEndPos([row, col]);
     } else if (selectState === "COLOR") {
       console.log("Selected Index : ", selectedColorIndex);
 
-      setTempColorPos((prev) => {
+      if (row === endPos[0] && col === endPos[1]) return;
+      if (row === startPos[0] && col === startPos[1]) return;
+
+      const isColorPosMatch = colorPos.findIndex(
+        ({ colorPos }) => colorPos[0] === row && colorPos[1] === col
+      );
+      const isFlagColorPosMatch = colorPos.findIndex(
+        ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
+      );
+  
+      if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+        if(selectState === "COLOR") {
+          console.log("Found");
+  
+          const foundIndex = isColorPosMatch !== -1 ? isColorPosMatch : isFlagColorPosMatch;
+  
+          const realIndex = Math.floor(selectedColorIndex/2);
+  
+          if(isColorPosMatch !== -1 && realIndex===foundIndex) {
+            setColorPos((prev) => {
+  
+              const currentData = [...prev];
+              currentData[foundIndex].colorPos = [9999,9999];
+  
+              return currentData;
+            });
+          } else if(isFlagColorPosMatch !== -1 && realIndex===foundIndex) {
+            setColorPos((prev) => {
+  
+              const currentData = [...prev];
+              currentData[foundIndex].flagColorPos = [9999,9999];
+  
+              return currentData;
+            });
+          }
+  
+          console.log(realIndex,foundIndex)
+          console.log(colorPos);
+        }
+        return;
+      }
+
+      setColorPos((prev) => {
         const selectedColor = colorDataList[selectedColorIndex];
 
         if (!selectedColor) {
@@ -208,6 +271,7 @@ export default function Home() {
         if (existingIndex !== -1) {
           updatedData = updatedData.map((item, index) => {
             if (index === existingIndex) {
+              newGrid[row][col] = 0;
               return {
                 ...item,
                 colorPos:
@@ -226,6 +290,7 @@ export default function Home() {
                     : item.flagColorPos,
               };
             }
+            newGrid[row][col] = 0;
             return item;
           });
         } else {
@@ -238,17 +303,18 @@ export default function Home() {
             isColorFlagCollect: false,
           });
         }
-
+        newGrid[row][col] = 0;
         return updatedData;
       });
     }
 
     setGrid(newGrid);
   };
+  
 
   useEffect(() => {
-    console.log(tempColorPos);
-  }, [tempColorPos]);
+    console.log(colorPos);
+  }, [colorPos]);
 
   const handleMouseEnter = (row: number, col: number) => {
     if (playState !== "STOPPED") return;
@@ -346,7 +412,7 @@ export default function Home() {
     };
 
     if (colorPos) {
-      setColorPos(tempColorPos.map((item) => ({ ...item })));
+      //setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -607,7 +673,7 @@ export default function Home() {
     };
 
     if (colorPos) {
-      setColorPos(tempColorPos.map((item) => ({ ...item })));
+      //setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -857,10 +923,19 @@ export default function Home() {
   const handleVisual = () => {
     if (playState === "END") {
       clearBoard();
-      setColorPos(tempColorPos.map((item) => ({ ...item })));
+    
+      setColorPos((prev) =>
+        prev.map((item) => ({
+          ...item,
+          isColorPosCollect: false,
+          isColorFlagCollect: false,
+        }))
+      );
+    
       setPlayState("STOPPED");
       return;
     }
+    
 
     if (playState !== "STOPPED") return;
 
@@ -880,7 +955,6 @@ export default function Home() {
     console.log("HELLO FLAG ", id);
     setSelectedColorIndex(id);
   };
-
   return (
     <div className="flex relative flex-col w-full h-full">
       <div
