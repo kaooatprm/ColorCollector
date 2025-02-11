@@ -1,10 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import ColorPos from "./components/colorPos";
 
 interface Performance {
   runTime: number;
   memUsage: number;
+}
+
+interface colorData {
+  id: number;
+  colorStyle: string;
+  iconStyle: string;
 }
 
 interface ColorObject {
@@ -14,6 +21,99 @@ interface ColorObject {
   isColorPosCollect: boolean;
   isColorFlagCollect: boolean;
 }
+
+const colorDataList = [
+  {
+    id: 0,
+    colorStyle: "#DB1D1D",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 1,
+    colorStyle: "#DB1D1D",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 2,
+    colorStyle: "#10DA60",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 3,
+    colorStyle: "#10DA60",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 4,
+    colorStyle: "#A30FE2",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 5,
+    colorStyle: "#A30FE2",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 6,
+    colorStyle: "#E29C0F",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 7,
+    colorStyle: "#E29C0F",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 8,
+    colorStyle: "#0FB8E2",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 9,
+    colorStyle: "#0FB8E2",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 10,
+    colorStyle: "#0F0FE2",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 11,
+    colorStyle: "#0F0FE2",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 12,
+    colorStyle: "#DBE20F",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 13,
+    colorStyle: "#DBE20F",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 14,
+    colorStyle: "#289420",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 15,
+    colorStyle: "#289420",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+  {
+    id: 16,
+    colorStyle: "#EA92F0",
+    iconStyle: "material-symbols:circle",
+  },
+  {
+    id: 17,
+    colorStyle: "#EA92F0",
+    iconStyle: "material-symbols:flag-rounded",
+  },
+];
 
 const mockData = [
   {
@@ -44,8 +144,9 @@ export default function Home() {
   //const [startPos, setStartPos] = useState<[number, number]>([17, 35]);
   //const [endPos, setEndPos] = useState<[number, number]>([1, 10]);
 
-  const [tempColorPos, setTempColorPos] = useState<ColorObject[]>(mockData);
+  const [tempColorPos, setTempColorPos] = useState<ColorObject[]>([]);
   const [colorPos, setColorPos] = useState<ColorObject[]>([]);
+  const [selectedColorIndex, setSelectedColorIndex] = useState<number>(0);
 
   const [playState, setPlayState] = useState<string>("STOPPED");
   const [blindSearchPerformance, setBlindSearchPerformance] =
@@ -87,10 +188,67 @@ export default function Home() {
       if (row === startPos[0] && col === startPos[1]) return;
       newGrid[row][col] = 3;
       setEndPos([row, col]);
+    } else if (selectState === "COLOR") {
+      console.log("Selected Index : ", selectedColorIndex);
+
+      setTempColorPos((prev) => {
+        const selectedColor = colorDataList[selectedColorIndex];
+
+        if (!selectedColor) {
+          return prev;
+        }
+
+        const { colorStyle } = selectedColor;
+        const existingIndex = prev.findIndex(
+          (item) => item.colorType === colorStyle
+        );
+
+        let updatedData = [...prev];
+
+        if (existingIndex !== -1) {
+          updatedData = updatedData.map((item, index) => {
+            if (index === existingIndex) {
+              return {
+                ...item,
+                colorPos:
+                  selectedColorIndex % 2 === 0
+                    ? item.colorPos[0] === row && item.colorPos[1] === col
+                      ? [9999, 9999]
+                      : [row, col]
+                    : item.colorPos,
+
+                flagColorPos:
+                  selectedColorIndex % 2 !== 0
+                    ? item.flagColorPos[0] === row &&
+                      item.flagColorPos[1] === col
+                      ? [9999, 9999]
+                      : [row, col]
+                    : item.flagColorPos,
+              };
+            }
+            return item;
+          });
+        } else {
+          updatedData.push({
+            colorType: colorStyle,
+            colorPos: selectedColorIndex % 2 === 0 ? [row, col] : [9999, 9999],
+            flagColorPos:
+              selectedColorIndex % 2 !== 0 ? [row, col] : [9999, 9999],
+            isColorPosCollect: false,
+            isColorFlagCollect: false,
+          });
+        }
+
+        return updatedData;
+      });
     }
 
     setGrid(newGrid);
   };
+
+  useEffect(() => {
+    console.log(tempColorPos);
+  }, [tempColorPos]);
 
   const handleMouseEnter = (row: number, col: number) => {
     if (playState !== "STOPPED") return;
@@ -129,14 +287,9 @@ export default function Home() {
     setGrid(newGrid);
   };
 
-  useEffect(() => {
-    setColorPos(tempColorPos.map(item => ({ ...item })));
-  }, []);
-
-  useEffect(() => {
-    console.log(colorPos);
-    console.log("----------");
-  }, [colorPos]);
+  /* useEffect(() => {
+    setColorPos(tempColorPos.map((item) => ({ ...item })));
+  }, []);*/
 
   const handleFindPath = () => {
     setPlayState("START");
@@ -193,7 +346,7 @@ export default function Home() {
     };
 
     if (colorPos) {
-      setColorPos(tempColorPos.map(item => ({ ...item })));
+      setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -454,7 +607,7 @@ export default function Home() {
     };
 
     if (colorPos) {
-      setColorPos(tempColorPos.map(item => ({ ...item })));
+      setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
       let currentColorFinderState = 0; // 0 = find color, 1 = find hole
@@ -702,10 +855,9 @@ export default function Home() {
   };
 
   const handleVisual = () => {
-
-    if(playState === "END") {
+    if (playState === "END") {
       clearBoard();
-      setColorPos(tempColorPos.map(item => ({ ...item })));
+      setColorPos(tempColorPos.map((item) => ({ ...item })));
       setPlayState("STOPPED");
       return;
     }
@@ -719,14 +871,41 @@ export default function Home() {
     }
   };
 
+  const handleClickColorPos = (id: number) => {
+    console.log("HELLO ", id);
+    setSelectedColorIndex(id);
+  };
+
+  const handleClickColorPosFlag = (id: number) => {
+    console.log("HELLO FLAG ", id);
+    setSelectedColorIndex(id);
+  };
+
   return (
     <div className="flex relative flex-col w-full h-full">
       <div
-        className={`bg-[#c5c5c5] pt-1 px-1 items-center absolute bottom-[20%] w-28 h-[500px] ml-3 ${
+        className={`bg-[#e7e7e7] pt-1 px-1 items-center absolute bottom-[20%] rounded-md w-28 h-[500px] ml-3 ${
           selectState === "COLOR" ? "flex flex-col" : "hidden"
         }`}
       >
         <div className="flex">Pick Color</div>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          {colorDataList.map((item) => (
+            <div key={item.id} className="flex cursor-pointer">
+              <ColorPos
+                id={item.id}
+                selectedIndex={selectedColorIndex}
+                iconStyle={item.iconStyle}
+                colorStyle={item.colorStyle}
+                onClick={
+                  item.id % 2 === 0
+                    ? handleClickColorPos
+                    : handleClickColorPosFlag
+                }
+              />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="flex justify-center items-center w-full">HEADER</div>
       <div className="flex gap-x-5 flex-row mt-5 justify-center items-center">
@@ -846,21 +1025,23 @@ export default function Home() {
                     onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
                     onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
                   >
-                    {rowIndex === startPos[0] && colIndex === startPos[1] && colorPos && (
-                      <div
-                        className={`w-full h-full justify-center items-center ${
-                          colorPos.length > 0 && colorPos[0].isColorPosCollect
-                            ? "hidden"
-                            : "flex"
-                        }`}
-                      >
-                        <Icon
-                          icon="material-symbols:play-arrow-rounded"
-                          width={20}
-                          height={20}
-                        />
-                      </div>
-                    )}
+                    {rowIndex === startPos[0] &&
+                      colIndex === startPos[1] &&
+                      colorPos && (
+                        <div
+                          className={`w-full h-full justify-center items-center ${
+                            colorPos.length > 0 && colorPos[0].isColorPosCollect
+                              ? "hidden"
+                              : "flex"
+                          }`}
+                        >
+                          <Icon
+                            icon="material-symbols:play-arrow-rounded"
+                            width={20}
+                            height={20}
+                          />
+                        </div>
+                      )}
                     {rowIndex === endPos[0] && colIndex === endPos[1] && (
                       <div className="flex justify-center items-center">
                         <Icon
@@ -876,14 +1057,18 @@ export default function Home() {
                           colorPos[0] === rowIndex && colorPos[1] === colIndex
                       );
                       const matchedFlag =
-                      matchedIndex !== undefined && matchedIndex !== -1 && colorPos
-                        ? colorPos[matchedIndex]
-                        : undefined;
+                        matchedIndex !== undefined &&
+                        matchedIndex !== -1 &&
+                        colorPos
+                          ? colorPos[matchedIndex]
+                          : undefined;
 
                       return matchedFlag ? (
                         <div
                           className={`w-full h-full justify-center items-center ${
-                            colorPos && matchedIndex !== undefined && colorPos[matchedIndex].isColorFlagCollect
+                            colorPos &&
+                            matchedIndex !== undefined &&
+                            colorPos[matchedIndex].isColorFlagCollect
                               ? "hidden"
                               : "flex"
                           }`}
@@ -911,7 +1096,9 @@ export default function Home() {
                       return matchedFlag ? (
                         <div
                           className={`w-full h-full justify-center items-center ${
-                            colorPos && matchedIndex !== undefined && matchedIndex + 1 < colorPos.length &&
+                            colorPos &&
+                            matchedIndex !== undefined &&
+                            matchedIndex + 1 < colorPos.length &&
                             colorPos[matchedIndex + 1].isColorPosCollect
                               ? "hidden"
                               : "flex"
