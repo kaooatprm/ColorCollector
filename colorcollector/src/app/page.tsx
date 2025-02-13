@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import ColorPos from "./components/colorPos";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface Performance {
   runTime: number;
@@ -157,7 +158,7 @@ export default function Home() {
         ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
       );
 
-      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+      if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
         return;
       }
       newGrid[row][col] = newGrid[row][col] === 1 ? 0 : 1;
@@ -172,7 +173,7 @@ export default function Home() {
         ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
       );
 
-      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+      if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
         return;
       }
       newGrid[row][col] = 2;
@@ -187,7 +188,7 @@ export default function Home() {
         ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
       );
 
-      if(isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
+      if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
         return;
       }
       newGrid[row][col] = 3;
@@ -204,38 +205,52 @@ export default function Home() {
       const isFlagColorPosMatch = colorPos.findIndex(
         ({ flagColorPos }) => flagColorPos[0] === row && flagColorPos[1] === col
       );
-  
+
       if (isColorPosMatch !== -1 || isFlagColorPosMatch !== -1) {
         if (selectState === "COLOR") {
-          const foundIndex = isColorPosMatch !== -1 ? isColorPosMatch : isFlagColorPosMatch;
-        
-          console.log("Found", foundIndex, colorPos[foundIndex].colorType, colorDataList[selectedColorIndex].colorStyle);
-        
+          const foundIndex =
+            isColorPosMatch !== -1 ? isColorPosMatch : isFlagColorPosMatch;
+
+          console.log(
+            "Found",
+            foundIndex,
+            colorPos[foundIndex].colorType,
+            colorDataList[selectedColorIndex].colorStyle
+          );
+
           setColorPos((prev) => {
             const currentData = [...prev];
-        
+
             if (
               isColorPosMatch !== -1 &&
-              currentData[foundIndex].colorType === colorDataList[selectedColorIndex].colorStyle &&
+              currentData[foundIndex].colorType ===
+                colorDataList[selectedColorIndex].colorStyle &&
               selectedColorIndex % 2 === 0
             ) {
               currentData[foundIndex].colorPos = [9999, 9999];
             } else if (
               isFlagColorPosMatch !== -1 &&
-              currentData[foundIndex].colorType === colorDataList[selectedColorIndex].colorStyle &&
+              currentData[foundIndex].colorType ===
+                colorDataList[selectedColorIndex].colorStyle &&
               selectedColorIndex % 2 !== 0
             ) {
               currentData[foundIndex].flagColorPos = [9999, 9999];
             }
-        
+
             return currentData.filter(
-              (item) => !(item.colorPos[0] === 9999 && item.colorPos[1] === 9999 && item.flagColorPos[0] === 9999 && item.flagColorPos[1] === 9999)
+              (item) =>
+                !(
+                  item.colorPos[0] === 9999 &&
+                  item.colorPos[1] === 9999 &&
+                  item.flagColorPos[0] === 9999 &&
+                  item.flagColorPos[1] === 9999
+                )
             );
           });
-        
+
           console.log(colorPos);
         }
-        
+
         return;
       }
 
@@ -295,7 +310,6 @@ export default function Home() {
 
     setGrid(newGrid);
   };
-  
 
   useEffect(() => {
     console.log(colorPos);
@@ -908,7 +922,7 @@ export default function Home() {
   const handleVisual = () => {
     if (playState === "END") {
       clearBoard();
-    
+
       setColorPos((prev) =>
         prev.map((item) => ({
           ...item,
@@ -916,11 +930,10 @@ export default function Home() {
           isColorFlagCollect: false,
         }))
       );
-    
+
       setPlayState("STOPPED");
       return;
     }
-    
 
     if (playState !== "STOPPED") return;
 
@@ -940,32 +953,23 @@ export default function Home() {
     console.log("HELLO FLAG ", id);
     setSelectedColorIndex(id);
   };
+
+  const onDragEnd = (result: any) => {
+    const { destination, source } = result;
+
+    if (!destination) return;
+
+    const reorderedItems = [...colorPos];
+
+    const [removed] = reorderedItems.splice(source.index, 1);
+    reorderedItems.splice(destination.index, 0, removed);
+
+    setColorPos(reorderedItems);
+  };
+  
+
   return (
     <div className="flex relative flex-col w-full h-full">
-      <div
-        className={`bg-[#e7e7e7] pt-1 px-1 items-center absolute bottom-[20%] rounded-md w-28 h-[500px] ml-3 ${
-          selectState === "COLOR" ? "flex flex-col" : "hidden"
-        }`}
-      >
-        <div className="flex">Pick Color</div>
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          {colorDataList.map((item) => (
-            <div key={item.id} className="flex cursor-pointer">
-              <ColorPos
-                id={item.id}
-                selectedIndex={selectedColorIndex}
-                iconStyle={item.iconStyle}
-                colorStyle={item.colorStyle}
-                onClick={
-                  item.id % 2 === 0
-                    ? handleClickColorPos
-                    : handleClickColorPosFlag
-                }
-              />
-            </div>
-          ))}
-        </div>
-      </div>
       <div className="flex justify-center items-center w-full">HEADER</div>
       <div className="flex gap-x-5 flex-row mt-5 justify-center items-center">
         <div
@@ -1063,121 +1067,212 @@ export default function Home() {
           Heuristic Search
         </div>
       </div>
-      <div className="flex mt-5 justify-center items-center w-full">
-        <table
-          className="border border-collapse border-black w-[85%]"
-          onMouseUp={() => setIsMouseDown(false)}
-        >
-          <tbody>
-            {grid.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className={`w-6 h-6 cursor-pointer border border-black ${
-                      cell === 1
-                        ? "bg-black"
-                        : cell === 10
-                        ? "bg-blue-400"
-                        : "bg-white hover:bg-gray-300"
-                    }`}
-                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                  >
-                    {rowIndex === startPos[0] &&
-                      colIndex === startPos[1] &&
-                      colorPos && (
-                        <div
-                          className={`w-full h-full justify-center items-center ${
-                            colorPos.length > 0 && colorPos[0].isColorPosCollect
-                              ? "hidden"
-                              : "flex"
-                          }`}
-                        >
-                          <Icon
-                            icon="material-symbols:play-arrow-rounded"
-                            width={20}
-                            height={20}
-                          />
-                        </div>
-                      )}
-                    {rowIndex === endPos[0] && colIndex === endPos[1] && (
-                      <div className="flex justify-center items-center">
-                        <Icon
-                          icon="material-symbols:flag-rounded"
-                          width={20}
-                          height={20}
-                        />
-                      </div>
-                    )}
-                    {(() => {
-                      const matchedIndex = colorPos?.findIndex(
-                        ({ colorPos }) =>
-                          colorPos[0] === rowIndex && colorPos[1] === colIndex
-                      );
-                      const matchedFlag =
-                        matchedIndex !== undefined &&
-                        matchedIndex !== -1 &&
-                        colorPos
-                          ? colorPos[matchedIndex]
-                          : undefined;
-
-                      return matchedFlag ? (
-                        <div
-                          className={`w-full h-full justify-center items-center ${
-                            colorPos &&
+      <div className="flex flex-row w-full h-full">
+        <div className="flex w-[10%] justify-center items-center">
+          <div
+            className={`bg-[#e7e7e7] pt-1 px-1 items-center rounded-md w-28 h-[500px] ml-3 ${
+              selectState === "COLOR" ? "flex flex-col" : "hidden"
+            }`}
+          >
+            <div className="flex">Pick Color</div>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {colorDataList.map((item) => (
+                <div key={item.id} className="flex cursor-pointer">
+                  <ColorPos
+                    id={item.id}
+                    selectedIndex={selectedColorIndex}
+                    iconStyle={item.iconStyle}
+                    colorStyle={item.colorStyle}
+                    onClick={
+                      item.id % 2 === 0
+                        ? handleClickColorPos
+                        : handleClickColorPosFlag
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex w-[80%]">
+          <div className="flex mt-5 justify-center items-center w-full">
+            <table
+              className="border border-collapse border-black w-full"
+              onMouseUp={() => setIsMouseDown(false)}
+            >
+              <tbody>
+                {grid.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {row.map((cell, colIndex) => (
+                      <td
+                        key={colIndex}
+                        className={`w-6 h-6 cursor-pointer border border-black ${
+                          cell === 1
+                            ? "bg-black"
+                            : cell === 10
+                            ? "bg-blue-400"
+                            : "bg-white hover:bg-gray-300"
+                        }`}
+                        onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                        onMouseEnter={() =>
+                          handleMouseEnter(rowIndex, colIndex)
+                        }
+                      >
+                        {rowIndex === startPos[0] &&
+                          colIndex === startPos[1] &&
+                          colorPos && (
+                            <div
+                              className={`w-full h-full justify-center items-center ${
+                                colorPos.length > 0 &&
+                                colorPos[0].isColorPosCollect
+                                  ? "hidden"
+                                  : "flex"
+                              }`}
+                            >
+                              <Icon
+                                icon="material-symbols:play-arrow-rounded"
+                                width={20}
+                                height={20}
+                              />
+                            </div>
+                          )}
+                        {rowIndex === endPos[0] && colIndex === endPos[1] && (
+                          <div className="flex justify-center items-center">
+                            <Icon
+                              icon="material-symbols:flag-rounded"
+                              width={20}
+                              height={20}
+                            />
+                          </div>
+                        )}
+                        {(() => {
+                          const matchedIndex = colorPos?.findIndex(
+                            ({ colorPos }) =>
+                              colorPos[0] === rowIndex &&
+                              colorPos[1] === colIndex
+                          );
+                          const matchedFlag =
                             matchedIndex !== undefined &&
-                            colorPos[matchedIndex].isColorFlagCollect
-                              ? "hidden"
-                              : "flex"
-                          }`}
-                        >
-                          <Icon
-                            icon="material-symbols:circle"
-                            width={20}
-                            height={20}
-                            style={{ color: matchedFlag.colorType }}
-                          />
-                        </div>
-                      ) : null;
-                    })()}
-                    {(() => {
-                      const matchedIndex = colorPos?.findIndex(
-                        ({ flagColorPos }) =>
-                          flagColorPos[0] === rowIndex &&
-                          flagColorPos[1] === colIndex
-                      );
-                      const matchedFlag =
-                        matchedIndex !== -1 && matchedIndex !== undefined
-                          ? colorPos?.[matchedIndex]
-                          : undefined;
+                            matchedIndex !== -1 &&
+                            colorPos
+                              ? colorPos[matchedIndex]
+                              : undefined;
 
-                      return matchedFlag ? (
-                        <div
-                          className={`w-full h-full justify-center items-center ${
-                            colorPos &&
-                            matchedIndex !== undefined &&
-                            matchedIndex + 1 < colorPos.length &&
-                            colorPos[matchedIndex + 1].isColorPosCollect
-                              ? "hidden"
-                              : "flex"
-                          }`}
-                        >
-                          <Icon
-                            icon="material-symbols:flag-rounded"
-                            width={20}
-                            height={20}
-                            style={{ color: matchedFlag.colorType }}
-                          />
-                        </div>
-                      ) : null;
-                    })()}
-                  </td>
+                          return matchedFlag ? (
+                            <div
+                              className={`w-full h-full justify-center items-center ${
+                                colorPos &&
+                                matchedIndex !== undefined &&
+                                colorPos[matchedIndex].isColorFlagCollect
+                                  ? "hidden"
+                                  : "flex"
+                              }`}
+                            >
+                              <Icon
+                                icon="material-symbols:circle"
+                                width={20}
+                                height={20}
+                                style={{ color: matchedFlag.colorType }}
+                              />
+                            </div>
+                          ) : null;
+                        })()}
+                        {(() => {
+                          const matchedIndex = colorPos?.findIndex(
+                            ({ flagColorPos }) =>
+                              flagColorPos[0] === rowIndex &&
+                              flagColorPos[1] === colIndex
+                          );
+                          const matchedFlag =
+                            matchedIndex !== -1 && matchedIndex !== undefined
+                              ? colorPos?.[matchedIndex]
+                              : undefined;
+
+                          return matchedFlag ? (
+                            <div
+                              className={`w-full h-full justify-center items-center ${
+                                colorPos &&
+                                matchedIndex !== undefined &&
+                                matchedIndex + 1 < colorPos.length &&
+                                colorPos[matchedIndex + 1].isColorPosCollect
+                                  ? "hidden"
+                                  : "flex"
+                              }`}
+                            >
+                              <Icon
+                                icon="material-symbols:flag-rounded"
+                                width={20}
+                                height={20}
+                                style={{ color: matchedFlag.colorType }}
+                              />
+                            </div>
+                          ) : null;
+                        })()}
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="flex w-[10%] justify-center items-center">
+          <div
+            className={`bg-[#e7e7e7] pt-1 px-1 items-center mt-20 rounded-md w-28 h-[500px] ml-3 ${
+              selectState === "COLOR" ? "flex flex-col" : "hidden"
+            }`}
+          >
+            <div className="flex">Change Order</div>
+              <div className="flex flex-col h-full">
+                {colorPos.length >= 0 && (
+                  <div className="flex flex-col h-full">
+                    <DragDropContext onDragEnd={onDragEnd}>
+                      <Droppable
+                        droppableId="colors"
+                        isDropDisabled={false}
+                        isCombineEnabled={false}
+                        ignoreContainerClipping={false}
+                      >
+                        {(provided) => (
+                          <ul
+                            className="characters text-black pt-2 px-3 h-full"
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                          >
+                            {colorPos.map((color, index) => {
+                              return (
+                                <Draggable
+                                  key={String(index)}
+                                  draggableId={String(index)}
+                                  index={index}
+                                >
+                                  {(provided) => (
+                                    <li
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className="mb-2 bg-white"
+                                    >
+                                    <ColorPos
+                                      selectedIndex={selectedColorIndex}
+                                      iconStyle="material-symbols:circle"
+                                      colorStyle={color.colorType}
+                                    />
+                                    </li>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
+                          </ul>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+                )}
+              </div>
+          </div>
+        </div>
       </div>
       <div className="flex w-full flex-row justify-center gap-x-20 mt-3">
         <div className="flex flex-row gap-x-2 mt-2 bg-green-500 rounded-full px-3 py-1">
