@@ -970,7 +970,7 @@ export default function Home() {
 
   return (
     <div className="flex relative flex-col w-full h-full">
-      <div className="flex justify-center items-center w-full">HEADER</div>
+      <div className="flex justify-center items-center w-full">4Jaturatep ColorCollector</div>
       <div className="flex gap-x-5 flex-row mt-5 justify-center items-center">
         <div
           className={`flex flex-row px-2 py-1 rounded-md border border-gray-600 ${
