@@ -410,7 +410,7 @@ export default function Home() {
       setGrid([...newGrid]);
     };
 
-    if (colorPos) {
+    if (colorPos && colorPos.length > 0) {
       //setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
@@ -671,7 +671,7 @@ export default function Home() {
       setGrid([...newGrid]);
     };
 
-    if (colorPos) {
+    if (colorPos && colorPos.length > 0) {
       //setColorPos(tempColorPos.map((item) => ({ ...item })));
       let colorFinderSize = colorPos.length;
       let currentColorFinderIndex = 0;
